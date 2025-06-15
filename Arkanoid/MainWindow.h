@@ -6,7 +6,7 @@
 #include "Paddle.h"
 #include "Ball.h"
 #include "Block.h"
-
+#include "Collision.h"
 class MainWindow : public BaseWindow<MainWindow>
 {
 public:

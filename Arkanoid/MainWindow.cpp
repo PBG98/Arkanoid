@@ -51,19 +51,12 @@ LRESULT MainWindow::HandleMessage(UINT uMsg, WPARAM wParam, LPARAM lParam)
 				// Todo Game Over
 			}
 
-			if (utility->IsBallCollide(ball->GetX(), ball->GetY(), ball->GetR(), paddle->GetLeft(), paddle->GetTop(), paddle->GetRight(), paddle->GetBottom()))
-			{
-				ball.get()->ReverseVy();
-			}
+			Collision<Ball, Paddle>::Check(*ball, *paddle);
 
 			for (const auto& block : blocks)
 			{
-				if (utility->IsBallCollide(ball->GetX(), ball->GetY(), ball->GetR(), block->GetLeft(), block->GetTop(), block->GetRight(), block->GetBottom()))
-				{
-					ball.get()->ReverseVy();
-				}
+				Collision<Ball, Block>::Check(*ball, *block);
 			}
-
 
 			ball->Move();
 		}		

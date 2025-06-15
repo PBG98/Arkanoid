@@ -22,6 +22,13 @@ namespace WINDOW
 		top,
 		bottom
 	};
+
+	enum class Collision
+	{
+		vertical,
+		horizontal,
+		apex
+	};
 }
 
 namespace PADDLE
