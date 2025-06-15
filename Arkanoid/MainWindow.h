@@ -2,6 +2,7 @@
 #include "pch.h"
 #include "BaseWindow.h"
 #include "CommonDefine.h"
+#include "Utility.h"
 #include "Paddle.h"
 #include "Ball.h"
 #include "Block.h"
@@ -14,16 +15,22 @@ public:
 	PCWSTR ClassName() const;
 	LRESULT HandleMessage(UINT uMsg, WPARAM wParam, LPARAM lParam);
 	void CreateBlockArray();
+	void MoveBlocks();
 	static UINT WINAPI CreateBlocks(LPVOID pParam);
-	bool running = true;
 
 private:
-	Paddle* paddle;
-	Ball* ball;
-	vector<unique_ptr<Block>> blocks;
+	void Initialize();
+	std::optional<WINDOW::Line> CheckBallCollideToWindow();
+private:
+	COMMON::GameStatus gameStatus;
+
+	unique_ptr<Paddle> paddle;
+	unique_ptr<Ball> ball;
+	std::forward_list<unique_ptr<Block>> blocks;
+	unique_ptr<Utility> utility;
 
 	CRITICAL_SECTION cs;
 	HANDLE hThread;
-	
+	size_t blockArrayNum;
 };
 

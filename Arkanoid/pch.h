@@ -8,5 +8,8 @@
 #include <iostream>
 #include <locale>
 #include <vector>
+#include <optional>
+#include <forward_list>
+
 
 using namespace std;

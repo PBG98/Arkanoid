@@ -2,6 +2,7 @@
 #include "Drawable.h"
 
 Drawable::Drawable()
+	:m_mainWND(nullptr), m_rectMain(0), speedByKeyBoard(10)
 {
 	
 }

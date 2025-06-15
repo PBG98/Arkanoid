@@ -2,11 +2,11 @@
 #include "MainWindow.h"
 
 MainWindow::MainWindow()
+	:gameStatus(COMMON::GameStatus::Ready), blockArrayNum(0), utility(make_unique<Utility>()), paddle(make_unique<Paddle>(200, 400)),
+	ball(make_unique<Ball>(200 + PADDLE::WIDTH / 2, 400 - BALL::RADIUS - 1))
 {
 	InitializeCriticalSection(&cs);
 
-	paddle = new Paddle(200, 400, 200 + COMMON::PADDLE_WIDTH, 400 + COMMON::PADDLE_HEIGHT);
-	ball = new Ball(300, 300, COMMON::BALL_RADIUS);
 	UINT nThreadID = 0;
 	HANDLE hThread = (HANDLE)::_beginthreadex(
 		NULL,
@@ -20,20 +20,10 @@ MainWindow::MainWindow()
 
 MainWindow::~MainWindow()
 {
-	running = false;
 	if (hThread)
 	{
 		WaitForSingleObject(hThread, INFINITE);
 		CloseHandle(hThread);
-	}
-
-	if (ball != nullptr)
-	{
-		delete ball;
-	}
-	if (paddle != nullptr)
-	{
-		delete paddle;
 	}
 }
 
@@ -47,23 +37,79 @@ LRESULT MainWindow::HandleMessage(UINT uMsg, WPARAM wParam, LPARAM lParam)
 	switch (uMsg)
 	{
 	case WM_CREATE:
+		Initialize();
 		SetTimer(m_hwnd, 1, 16, nullptr);
 		paddle->Initialize(m_hwnd);
 		ball->Initialize(m_hwnd);
+		
 		return 0;
 	case WM_TIMER:
-		ball->Move();
+		if (gameStatus == COMMON::GameStatus::Start)
+		{
+			if (CheckBallCollideToWindow() == WINDOW::Line::bottom)
+			{
+				// Todo Game Over
+			}
+
+			if (utility->IsBallCollide(ball->GetX(), ball->GetY(), ball->GetR(), paddle->GetLeft(), paddle->GetTop(), paddle->GetRight(), paddle->GetBottom()))
+			{
+				ball.get()->ReverseVy();
+			}
+
+			for (const auto& block : blocks)
+			{
+				if (utility->IsBallCollide(ball->GetX(), ball->GetY(), ball->GetR(), block->GetLeft(), block->GetTop(), block->GetRight(), block->GetBottom()))
+				{
+					ball.get()->ReverseVy();
+				}
+			}
+
+
+			ball->Move();
+		}		
 		InvalidateRect(m_hwnd, NULL, TRUE);
 		return 0;
 	case WM_KEYDOWN:
 	{
+		if (wParam == VK_SPACE)
+		{
+			if (gameStatus == COMMON::GameStatus::Ready ||
+				gameStatus == COMMON::GameStatus::Paused)
+			{
+				gameStatus = COMMON::GameStatus::Start;
+			}
+			else
+			{
+				gameStatus = COMMON::GameStatus::Paused;
+			}
+		}
+
 		if (wParam == VK_LEFT)
 		{
-			paddle->MoveLeft();
+			if (gameStatus == COMMON::GameStatus::Ready ||
+				gameStatus == COMMON::GameStatus::Start)
+			{
+				paddle->MoveLeft();
+			}
+
+			if (gameStatus == COMMON::GameStatus::Ready)
+			{
+				ball->MoveLeft();
+			}
 		}
-		else if (wParam == VK_RIGHT)
+
+		if (wParam == VK_RIGHT)
 		{
-			paddle->MoveRight();
+			if (gameStatus == COMMON::GameStatus::Ready ||
+				gameStatus == COMMON::GameStatus::Start)
+			{
+				paddle->MoveRight();
+			}
+
+			if (gameStatus == COMMON::GameStatus::Ready)
+			{
+				ball->MoveRight();
+			}
 		}
 		InvalidateRect(m_hwnd, NULL, TRUE);
 		return 0;
@@ -86,9 +132,9 @@ LRESULT MainWindow::HandleMessage(UINT uMsg, WPARAM wParam, LPARAM lParam)
 
 		paddle->Draw(hdc);
 		ball->Draw(hdc);
-		for (size_t i = 0; i < blocks.size(); i++)
+		for (const auto& block : blocks)
 		{
-			blocks.at(i).get()->Draw(hdc);
+			block.get()->Draw(hdc);
 		}
 
 		EndPaint(m_hwnd, &ps);
@@ -102,15 +148,10 @@ LRESULT MainWindow::HandleMessage(UINT uMsg, WPARAM wParam, LPARAM lParam)
 
 void MainWindow::CreateBlockArray()
 {
-	RECT rectMain;
-	GetClientRect(m_hwnd, &rectMain);
-	LONG mainWindowWidth = rectMain.right - rectMain.left;
-
-	const size_t blockArrayNum = mainWindowWidth / COMMON::BLOCK_WIDTH;
-
 	for (size_t i = 0; i < blockArrayNum; i++)
 	{
-		blocks.emplace_back(make_unique<Block>());
+		int leftPoint = i * BLOCK::WIDTH;
+		blocks.emplace_front(make_unique<Block>(leftPoint));
 	}
 }
 
@@ -118,14 +159,71 @@ UINT WINAPI MainWindow::CreateBlocks(LPVOID pParam)
 {
 	MainWindow* wnd = static_cast<MainWindow*>(pParam);
 
-	while (wnd->running)
+	while (true)
 	{
-		wnd->CreateBlockArray();
+		if (wnd->gameStatus == COMMON::GameStatus::Start)
+		{
+			wnd->CreateBlockArray();
+			wnd->MoveBlocks();
 
-		InvalidateRect(wnd->m_hwnd, NULL, TRUE);
+			InvalidateRect(wnd->m_hwnd, NULL, TRUE);
 
-		Sleep(3000);
+			Sleep(3000);
+		}	
 	}
 
 	return 0;
+}
+
+void MainWindow::Initialize()
+{
+	RECT rectMain;
+	GetClientRect(m_hwnd, &rectMain);
+	LONG mainWindowWidth = rectMain.right - rectMain.left;
+
+	blockArrayNum = mainWindowWidth / BLOCK::WIDTH;
+}
+
+std::optional<WINDOW::Line> MainWindow::CheckBallCollideToWindow()
+{
+	RECT rectMain;
+	GetClientRect(m_hwnd, &rectMain);
+
+	int x = ball.get()->GetX();
+	int y = ball.get()->GetY();
+	int r = ball.get()->GetR();
+
+	if (x - r <= rectMain.left + 2)
+	{
+		ball.get()->ReverseVx();
+		return WINDOW::Line::left;
+	}
+
+	if (x + r >= rectMain.right)
+	{
+		ball.get()->ReverseVx();
+		return WINDOW::Line::right;
+	}
+
+	if (y - r <= rectMain.top + 2)
+	{
+		ball.get()->ReverseVy();
+		return WINDOW::Line::top;
+	}
+
+	if (y + r >= rectMain.bottom)
+	{
+		ball.get()->ReverseVy();
+		return WINDOW::Line::bottom;
+	}
+
+	return nullopt;
+}
+
+void MainWindow::MoveBlocks()
+{
+	for (const auto& block : blocks)
+	{
+		block.get()->Move();
+	}
 }

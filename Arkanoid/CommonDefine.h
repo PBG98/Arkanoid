@@ -4,10 +4,39 @@ namespace COMMON
 {
 	const wstring ARKNOID = L"ARKNOID";
 
-	const unsigned int PADDLE_WIDTH = 100;
-	const unsigned int PADDLE_HEIGHT = 20;
-	const unsigned int BLOCK_WIDTH = 100;
-	const unsigned int BLOCK_HEIGHT = 20;
-	const unsigned int BALL_RADIUS = 10;
+	enum class GameStatus
+	{
+		Ready,
+		Start,
+		Paused,
+		End
+	};
+}
 
+namespace WINDOW
+{
+	enum class Line
+	{
+		left,
+		right,
+		top,
+		bottom
+	};
+}
+
+namespace PADDLE
+{
+	const unsigned int WIDTH = 100;
+	const unsigned int HEIGHT = 20;
+}
+
+namespace BLOCK
+{
+	const unsigned int WIDTH = 100;
+	const unsigned int HEIGHT = 20;
+}
+
+namespace BALL
+{
+	const unsigned int RADIUS = 10;
 }
