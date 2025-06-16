@@ -5,6 +5,7 @@ class Block : public Drawable
 {
 public:
 	Block(int left);
+	~Block();
 	void Draw(const HDC& hdc) override;
 	void Move();
 

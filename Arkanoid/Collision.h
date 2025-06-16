@@ -5,38 +5,66 @@ template<typename T1, typename T2>
 class Collision
 {
 public:
-	static optional<WINDOW::Collision> Check(const T1& movalbe, const T2& staionary)
+	static bool Check(T1& movable, const T2& stationary)
 	{
-		return nullopt;
-	}
+		int x = movable.GetX();
+		int y = movable.GetY();
+		int r = movable.GetR();
+		int left = stationary.GetLeft();
+		int right = stationary.GetRight();
+		int top = stationary.GetTop();
+		int bottom = stationary.GetBottom();
 
-private:
-	optional<WINDOW::Collision> IsBallCollide(int cx, int cy, int r, int left, int top, int right, int bottom)
-	{
-		int collisionX = max(left, min(cx, right));
-		int collisionY = max(top, min(cy, bottom));
+		int collisionX = max(left, min(x, right));
+		int collisionY = max(top, min(y, bottom));
 
-		int distanceX = cx - collisionX;
-		int distanceY = cy - collisionY;
+		int distanceX = x - collisionX;
+		int distanceY = y - collisionY;
+
+		optional<WINDOW::Collision> type{ nullopt };
 
 		if ((distanceX * distanceX + distanceY * distanceY) <= r * r)
 		{
 			if (abs(distanceX) > abs(distanceY))
 			{
-				return WINDOW::Collision::vertical;
+				type = WINDOW::Collision::vertical;
 			}
 			else if (abs(distanceX) < abs(distanceY))
 			{
-				return WINDOW::Collision::horizontal;
+				type = WINDOW::Collision::horizontal;
 			}
 			else
 			{
-				return WINDOW::Collision::apex;
+				type = WINDOW::Collision::apex;
 			}
 		}
 
-		return nullopt;
+		if (type == nullopt)
+		{
+			return false;
+		}
+
+		switch (type.value())
+		{
+		case WINDOW::Collision::vertical:
+			movable.ReverseVx();
+			break;
+		case WINDOW::Collision::horizontal:
+			movable.ReverseVx();
+			movable.ReverseVy();
+			break;
+		case WINDOW::Collision::apex:
+			movable.ReverseVx();
+			movable.ReverseVy();
+			break;
+		default:
+			break;
+		}
+
+		return true;
 	}
+
+private:
 
 };
 

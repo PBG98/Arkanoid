@@ -8,6 +8,10 @@ Block::Block(int left)
 	bottom = top + BLOCK::HEIGHT;
 }
 
+Block::~Block()
+{
+}
+
 void Block::Draw(const HDC& hdc)
 {
 	Rectangle(hdc, left, top, right, bottom);

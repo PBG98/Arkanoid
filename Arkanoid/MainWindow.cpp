@@ -52,11 +52,7 @@ LRESULT MainWindow::HandleMessage(UINT uMsg, WPARAM wParam, LPARAM lParam)
 			}
 
 			Collision<Ball, Paddle>::Check(*ball, *paddle);
-
-			for (const auto& block : blocks)
-			{
-				Collision<Ball, Block>::Check(*ball, *block);
-			}
+			blocks.remove_if([&](const auto& block) {return Collision<Ball, Block>::Check(*ball, *block); });
 
 			ball->Move();
 		}		
@@ -161,7 +157,7 @@ UINT WINAPI MainWindow::CreateBlocks(LPVOID pParam)
 
 			InvalidateRect(wnd->m_hwnd, NULL, TRUE);
 
-			Sleep(3000);
+			Sleep(8000);
 		}	
 	}
 
