@@ -27,7 +27,6 @@ private:
 	unique_ptr<Paddle> paddle;
 	unique_ptr<Ball> ball;
 	std::forward_list<unique_ptr<Block>> blocks;
-	unique_ptr<Utility> utility;
 
 	CRITICAL_SECTION cs;
 	HANDLE hThread;

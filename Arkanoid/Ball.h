@@ -14,6 +14,9 @@ public:
 	int GetY() const;
 	int GetR() const;
 
+	void SetX(const int x);
+	void SetY(const int y);
+
 	void ReverseVx();
 	void ReverseVy();	
 

@@ -25,7 +25,8 @@ namespace WINDOW
 
 	enum class Collision
 	{
-		vertical,
+		left,
+		right,
 		horizontal,
 		apex
 	};

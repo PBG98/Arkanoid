@@ -1,15 +1,15 @@
 #pragma once
 #include "pch.h"
 #include "CommonDefine.h"
-template<typename T1, typename T2>
+template<typename T>
 class Collision
 {
 public:
-	static bool Check(T1& movable, const T2& stationary)
+	static bool Check(Ball& ball, const T& stationary)
 	{
-		int x = movable.GetX();
-		int y = movable.GetY();
-		int r = movable.GetR();
+		int x = ball.GetX();
+		int y = ball.GetY();
+		int r = ball.GetR();
 		int left = stationary.GetLeft();
 		int right = stationary.GetRight();
 		int top = stationary.GetTop();
@@ -21,13 +21,21 @@ public:
 		int distanceX = x - collisionX;
 		int distanceY = y - collisionY;
 
-		optional<WINDOW::Collision> type{ nullopt };
+		type = nullopt;
 
 		if ((distanceX * distanceX + distanceY * distanceY) <= r * r)
 		{
 			if (abs(distanceX) > abs(distanceY))
 			{
-				type = WINDOW::Collision::vertical;
+				if (right < x)
+				{
+					type = WINDOW::Collision::right;
+				}
+				else
+				{
+					type = WINDOW::Collision::left;
+				}
+				
 			}
 			else if (abs(distanceX) < abs(distanceY))
 			{
@@ -44,27 +52,37 @@ public:
 			return false;
 		}
 
-		switch (type.value())
-		{
-		case WINDOW::Collision::vertical:
-			movable.ReverseVx();
-			break;
-		case WINDOW::Collision::horizontal:
-			movable.ReverseVx();
-			movable.ReverseVy();
-			break;
-		case WINDOW::Collision::apex:
-			movable.ReverseVx();
-			movable.ReverseVy();
-			break;
-		default:
-			break;
-		}
+		ChangeDirection(ball, stationary);
 
 		return true;
 	}
 
 private:
+	static void ChangeDirection(Ball& ball, const T& stationary)
+	{
+		switch (type.value())
+		{
+		case WINDOW::Collision::left:
+			ball.SetX(stationary.GetLeft() - ball.GetR() - 1);
+			ball.ReverseVx();
+			break;
+		case WINDOW::Collision::right:
+			ball.SetX(stationary.GetRight() + ball.GetR() + 1);
+			ball.ReverseVx();
+			break;
+		case WINDOW::Collision::horizontal:
+			ball.ReverseVy();
+			break;
+		case WINDOW::Collision::apex:
+			ball.ReverseVx();
+			ball.ReverseVy();
+			break;
+		default:
+			break;
+		}
+	}
 
+private:
+	inline static optional<WINDOW::Collision> type{ nullopt };
 };
 

@@ -51,6 +51,16 @@ int Ball::GetR() const
 	return r;
 }
 
+void Ball::SetX(const int x)
+{
+	this->x = x;
+}
+
+void Ball::SetY(const int y)
+{
+	this->y = y;
+}
+
 void Ball::ReverseVx()
 {
 	Vx = -Vx;

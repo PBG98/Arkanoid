@@ -2,8 +2,7 @@
 #include "MainWindow.h"
 
 MainWindow::MainWindow()
-	:gameStatus(COMMON::GameStatus::Ready), blockArrayNum(0), utility(make_unique<Utility>()), paddle(make_unique<Paddle>(200, 400)),
-	ball(make_unique<Ball>(200 + PADDLE::WIDTH / 2, 400 - BALL::RADIUS - 1))
+	:gameStatus(COMMON::GameStatus::Ready), blockArrayNum(0), paddle(make_unique<Paddle>(200, 400)), ball(make_unique<Ball>(200 + PADDLE::WIDTH / 2, 400 - BALL::RADIUS - 1))
 {
 	InitializeCriticalSection(&cs);
 
@@ -51,8 +50,8 @@ LRESULT MainWindow::HandleMessage(UINT uMsg, WPARAM wParam, LPARAM lParam)
 				// Todo Game Over
 			}
 
-			Collision<Ball, Paddle>::Check(*ball, *paddle);
-			blocks.remove_if([&](const auto& block) {return Collision<Ball, Block>::Check(*ball, *block); });
+			Collision<Paddle>::Check(*ball, *paddle);
+			blocks.remove_if([&](const auto& block) {return Collision<Block>::Check(*ball, *block); });
 
 			ball->Move();
 		}		
