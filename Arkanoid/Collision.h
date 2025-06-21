@@ -1,6 +1,7 @@
 #pragma once
 #include "pch.h"
 #include "CommonDefine.h"
+#include "GameManager.h"
 template<typename T>
 class Collision
 {
@@ -54,6 +55,7 @@ public:
 
 		ChangeDirection(ball, stationary);
 
+		GameManager::GetInstance().IncreaseScore();
 		return true;
 	}
 

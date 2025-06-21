@@ -2,7 +2,7 @@
 #include "MainWindow.h"
 
 MainWindow::MainWindow()
-	:gameStatus(COMMON::GameStatus::Ready), blockArrayNum(0), paddle(make_unique<Paddle>(200, 400)), ball(make_unique<Ball>(200 + PADDLE::WIDTH / 2, 400 - BALL::RADIUS - 1))
+	:gameStatus(COMMON::GameStatus::Ready), blockArrayNum(0)
 {
 	InitializeCriticalSection(&cs);
 
@@ -38,8 +38,6 @@ LRESULT MainWindow::HandleMessage(UINT uMsg, WPARAM wParam, LPARAM lParam)
 	case WM_CREATE:
 		Initialize();
 		SetTimer(m_hwnd, 1, 16, nullptr);
-		paddle->Initialize(m_hwnd);
-		ball->Initialize(m_hwnd);
 		
 		return 0;
 	case WM_TIMER:
@@ -47,7 +45,13 @@ LRESULT MainWindow::HandleMessage(UINT uMsg, WPARAM wParam, LPARAM lParam)
 		{
 			if (CheckBallCollideToWindow() == WINDOW::Line::bottom)
 			{
-				// Todo Game Over
+				GameManager::GetInstance().DecreaseLife();
+				if (GameManager::GetInstance().IsGameOver())
+				{
+					gameStatus == COMMON::GameStatus::Ready;
+					Initialize();
+					return 0;
+				}
 			}
 
 			Collision<Paddle>::Check(*ball, *paddle);
@@ -165,6 +169,23 @@ UINT WINAPI MainWindow::CreateBlocks(LPVOID pParam)
 
 void MainWindow::Initialize()
 {
+	if (paddle != nullptr)
+	{
+		paddle.reset();
+	}
+	if (paddle != nullptr)
+	{
+		ball.reset();
+	}
+	if (!blocks.empty())
+	{
+		blocks.clear();
+	}
+	paddle = make_unique<Paddle>(200, 400);
+	ball = make_unique<Ball>(200 + PADDLE::WIDTH / 2, 400 - BALL::RADIUS - 1);
+	paddle->Initialize(m_hwnd);
+	ball->Initialize(m_hwnd);
+
 	RECT rectMain;
 	GetClientRect(m_hwnd, &rectMain);
 	LONG mainWindowWidth = rectMain.right - rectMain.left;

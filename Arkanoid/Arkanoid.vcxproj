@@ -137,6 +137,7 @@
     <ClCompile Include="Ball.cpp" />
     <ClCompile Include="Block.cpp" />
     <ClCompile Include="Drawable.cpp" />
+    <ClCompile Include="GameManager.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="MainWindow.cpp" />
     <ClCompile Include="Paddle.cpp" />
@@ -153,6 +154,7 @@
     <ClInclude Include="Collision.h" />
     <ClInclude Include="CommonDefine.h" />
     <ClInclude Include="Drawable.h" />
+    <ClInclude Include="GameManager.h" />
     <ClInclude Include="MainWindow.h" />
     <ClInclude Include="Paddle.h" />
     <ClInclude Include="pch.h" />

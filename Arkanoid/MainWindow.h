@@ -2,7 +2,7 @@
 #include "pch.h"
 #include "BaseWindow.h"
 #include "CommonDefine.h"
-#include "Utility.h"
+#include "GameManager.h"
 #include "Paddle.h"
 #include "Ball.h"
 #include "Block.h"
