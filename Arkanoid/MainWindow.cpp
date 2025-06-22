@@ -2,7 +2,7 @@
 #include "MainWindow.h"
 
 MainWindow::MainWindow()
-	:blockArrayNum(0)
+	:blockArrayNum(0), memDC(nullptr), memBitmap(nullptr), oldBitmap(nullptr)
 {
 	InitializeCriticalSection(&cs);
 
@@ -40,6 +40,13 @@ MainWindow::~MainWindow()
 		CloseHandle(hStopEvent);
 		hStopEvent = nullptr;
 	}
+
+	if (memDC)
+	{
+		SelectObject(memDC, oldBitmap);
+		DeleteObject(memBitmap);
+		DeleteDC(memDC);
+	}
 }
 
 PCWSTR MainWindow::ClassName() const
@@ -52,10 +59,25 @@ LRESULT MainWindow::HandleMessage(UINT uMsg, WPARAM wParam, LPARAM lParam)
 	switch (uMsg)
 	{
 	case WM_CREATE:
+	{
 		Initialize();
 		SetTimer(m_hwnd, 1, 16, nullptr);
-		
+
+		GetClientRect(m_hwnd, &rectMain);
+
+		mainWidth = rectMain.right - rectMain.left;
+		mainHeight = rectMain.bottom - rectMain.top;
+
+		HDC hdc = GetDC(m_hwnd);
+		memDC = CreateCompatibleDC(hdc);
+		memBitmap = CreateCompatibleBitmap(hdc, mainWidth, mainHeight);
+		oldBitmap = (HBITMAP)SelectObject(memDC, memBitmap);
+		ReleaseDC(m_hwnd, hdc);
+
+		blockArrayNum = mainWidth / BLOCK::WIDTH;
+
 		return 0;
+	}		
 	case WM_TIMER:
 		if (GameManager::GetInstance().CheckGameStatus(GameStatus::Start))
 		{
@@ -144,18 +166,21 @@ LRESULT MainWindow::HandleMessage(UINT uMsg, WPARAM wParam, LPARAM lParam)
 		PAINTSTRUCT ps;
 		HDC hdc = BeginPaint(m_hwnd, &ps);
 
-		FillRect(hdc, &ps.rcPaint, (HBRUSH)(COLOR_WINDOW + 1));
+		RECT fullRect = { 0, 0, mainWidth, mainHeight };
+		FillRect(memDC, &fullRect, (HBRUSH)(COLOR_WINDOW + 1));
 
-		paddle->Draw(hdc);
-		ball->Draw(hdc);
+		paddle->Draw(memDC);
+		ball->Draw(memDC);
 		EnterCriticalSection(&cs);
 		for (const auto& block : blocks)
 		{
-			block.get()->Draw(hdc);
+			block.get()->Draw(memDC);
 		}
 		LeaveCriticalSection(&cs);
 
-		DrawScore(hdc);
+		DrawScore(memDC);
+
+		BitBlt(hdc, 0, 0, mainWidth, mainHeight, memDC, 0, 0, SRCCOPY);
 
 		EndPaint(m_hwnd, &ps);
 		return 0;
@@ -220,19 +245,10 @@ void MainWindow::Initialize()
 	ball->Initialize(m_hwnd);
 
 	GameManager::GetInstance().UpdateGameStatus(GameStatus::Ready);
-
-	RECT rectMain;
-	GetClientRect(m_hwnd, &rectMain);
-	LONG mainWindowWidth = rectMain.right - rectMain.left;
-
-	blockArrayNum = mainWindowWidth / BLOCK::WIDTH;
 }
 
 std::optional<WINDOW::Line> MainWindow::CheckBallCollideToWindow()
 {
-	RECT rectMain;
-	GetClientRect(m_hwnd, &rectMain);
-
 	int x = ball.get()->GetX();
 	int y = ball.get()->GetY();
 	int r = ball.get()->GetR();

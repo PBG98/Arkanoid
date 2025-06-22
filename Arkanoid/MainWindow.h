@@ -34,10 +34,16 @@ private:
 	unique_ptr<Paddle> paddle;
 	unique_ptr<Ball> ball;
 	std::forward_list<unique_ptr<Block>> blocks;
-
-	HANDLE hThread;
 	size_t blockArrayNum;
 
+	HANDLE hThread;
 	HANDLE hStopEvent;
+	
+	RECT rectMain;
+	HDC memDC;
+	HBITMAP memBitmap;
+	HBITMAP oldBitmap;
+	int mainWidth;
+	int mainHeight;
 };
 
