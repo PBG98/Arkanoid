@@ -55,7 +55,6 @@ public:
 
 		ChangeDirection(ball, stationary);
 
-		GameManager::GetInstance().IncreaseScore();
 		return true;
 	}
 

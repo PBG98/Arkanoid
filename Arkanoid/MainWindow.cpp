@@ -2,12 +2,12 @@
 #include "MainWindow.h"
 
 MainWindow::MainWindow()
-	:gameStatus(COMMON::GameStatus::Ready), blockArrayNum(0)
+	:blockArrayNum(0)
 {
 	InitializeCriticalSection(&cs);
 
 	UINT nThreadID = 0;
-	HANDLE hThread = (HANDLE)::_beginthreadex(
+	hThread = (HANDLE)::_beginthreadex(
 		NULL,
 		0,
 		MainWindow::CreateBlocks,
@@ -15,6 +15,8 @@ MainWindow::MainWindow()
 		0,
 		&nThreadID
 	);
+
+	hStopEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
 }
 
 MainWindow::~MainWindow()
@@ -41,21 +43,22 @@ LRESULT MainWindow::HandleMessage(UINT uMsg, WPARAM wParam, LPARAM lParam)
 		
 		return 0;
 	case WM_TIMER:
-		if (gameStatus == COMMON::GameStatus::Start)
+		if (GameManager::GetInstance().CheckGameStatus(COMMON::GameStatus::Start))
 		{
 			if (CheckBallCollideToWindow() == WINDOW::Line::bottom)
 			{
 				GameManager::GetInstance().DecreaseLife();
+				Initialize();
 				if (GameManager::GetInstance().IsGameOver())
 				{
-					gameStatus == COMMON::GameStatus::Ready;
-					Initialize();
-					return 0;
+					ShowGameOverDialog();
 				}
+				return 0;
 			}
 
 			Collision<Paddle>::Check(*ball, *paddle);
-			blocks.remove_if([&](const auto& block) {return Collision<Block>::Check(*ball, *block); });
+			size_t score = blocks.remove_if([&](const auto& block) {return Collision<Block>::Check(*ball, *block); });
+			GameManager::GetInstance().IncreaseScore(score);
 
 			ball->Move();
 		}		
@@ -65,26 +68,26 @@ LRESULT MainWindow::HandleMessage(UINT uMsg, WPARAM wParam, LPARAM lParam)
 	{
 		if (wParam == VK_SPACE)
 		{
-			if (gameStatus == COMMON::GameStatus::Ready ||
-				gameStatus == COMMON::GameStatus::Paused)
+			if (GameManager::GetInstance().CheckGameStatus(COMMON::GameStatus::Ready) ||
+				GameManager::GetInstance().CheckGameStatus(COMMON::GameStatus::Paused))
 			{
-				gameStatus = COMMON::GameStatus::Start;
+				GameManager::GetInstance().UpdateGameStatus(COMMON::GameStatus::Start);
 			}
 			else
 			{
-				gameStatus = COMMON::GameStatus::Paused;
+				GameManager::GetInstance().UpdateGameStatus(COMMON::GameStatus::Paused);
 			}
 		}
 
 		if (wParam == VK_LEFT)
 		{
-			if (gameStatus == COMMON::GameStatus::Ready ||
-				gameStatus == COMMON::GameStatus::Start)
+			if (GameManager::GetInstance().CheckGameStatus(COMMON::GameStatus::Ready) ||
+				GameManager::GetInstance().CheckGameStatus(COMMON::GameStatus::Start))
 			{
 				paddle->MoveLeft();
 			}
 
-			if (gameStatus == COMMON::GameStatus::Ready)
+			if (GameManager::GetInstance().CheckGameStatus(COMMON::GameStatus::Ready))
 			{
 				ball->MoveLeft();
 			}
@@ -92,13 +95,13 @@ LRESULT MainWindow::HandleMessage(UINT uMsg, WPARAM wParam, LPARAM lParam)
 
 		if (wParam == VK_RIGHT)
 		{
-			if (gameStatus == COMMON::GameStatus::Ready ||
-				gameStatus == COMMON::GameStatus::Start)
+			if (GameManager::GetInstance().CheckGameStatus(COMMON::GameStatus::Ready) ||
+				GameManager::GetInstance().CheckGameStatus(COMMON::GameStatus::Start))
 			{
 				paddle->MoveRight();
 			}
 
-			if (gameStatus == COMMON::GameStatus::Ready)
+			if (GameManager::GetInstance().CheckGameStatus(COMMON::GameStatus::Ready))
 			{
 				ball->MoveRight();
 			}
@@ -129,6 +132,8 @@ LRESULT MainWindow::HandleMessage(UINT uMsg, WPARAM wParam, LPARAM lParam)
 			block.get()->Draw(hdc);
 		}
 
+		DrawScore(hdc);
+
 		EndPaint(m_hwnd, &ps);
 		return 0;
 	}
@@ -142,7 +147,7 @@ void MainWindow::CreateBlockArray()
 {
 	for (size_t i = 0; i < blockArrayNum; i++)
 	{
-		int leftPoint = i * BLOCK::WIDTH;
+		size_t leftPoint = i * BLOCK::WIDTH;
 		blocks.emplace_front(make_unique<Block>(leftPoint));
 	}
 }
@@ -151,9 +156,9 @@ UINT WINAPI MainWindow::CreateBlocks(LPVOID pParam)
 {
 	MainWindow* wnd = static_cast<MainWindow*>(pParam);
 
-	while (true)
+	while (WaitForSingleObject(hStopEvent, 0) == WAIT_TIMEOUT)
 	{
-		if (wnd->gameStatus == COMMON::GameStatus::Start)
+		if (GameManager::GetInstance().CheckGameStatus(COMMON::GameStatus::Start))
 		{
 			wnd->CreateBlockArray();
 			wnd->MoveBlocks();
@@ -173,7 +178,7 @@ void MainWindow::Initialize()
 	{
 		paddle.reset();
 	}
-	if (paddle != nullptr)
+	if (ball != nullptr)
 	{
 		ball.reset();
 	}
@@ -185,6 +190,8 @@ void MainWindow::Initialize()
 	ball = make_unique<Ball>(200 + PADDLE::WIDTH / 2, 400 - BALL::RADIUS - 1);
 	paddle->Initialize(m_hwnd);
 	ball->Initialize(m_hwnd);
+
+	GameManager::GetInstance().UpdateGameStatus(COMMON::GameStatus::Ready);
 
 	RECT rectMain;
 	GetClientRect(m_hwnd, &rectMain);
@@ -227,6 +234,74 @@ std::optional<WINDOW::Line> MainWindow::CheckBallCollideToWindow()
 	}
 
 	return nullopt;
+}
+
+void MainWindow::DrawScore(HDC hdc)
+{
+	HFONT hFont = CreateFont(
+		24,
+		0,
+		0,
+		0,
+		FW_BOLD,
+		FALSE,
+		FALSE,
+		FALSE,
+		DEFAULT_CHARSET,
+		OUT_DEFAULT_PRECIS,
+		CLIP_DEFAULT_PRECIS,
+		DEFAULT_QUALITY,
+		DEFAULT_PITCH | FF_SWISS,
+		L"Arial"
+	);
+
+	HFONT oldFont = (HFONT)SelectObject(hdc, hFont);
+	SetBkMode(hdc, TRANSPARENT);
+	SetTextColor(hdc, RGB(0, 0, 0));
+	wstring scoreText = to_wstring(GameManager::GetInstance().GetScore());
+
+	RECT clientRect;
+	GetClientRect(m_hwnd, &clientRect);
+
+	RECT textRect;
+	textRect.left = clientRect.right - 150;
+	textRect.top = 10;
+	textRect.right = clientRect.right - 10;
+	textRect.bottom = 50;
+
+	DrawText(hdc, scoreText.c_str(), -1, &textRect, DT_RIGHT | DT_TOP);
+
+	SelectObject(hdc, oldFont);
+	DeleteObject(hFont);
+}
+
+void MainWindow::ShowGameOverDialog()
+{
+	unsigned int finalSocre = GameManager::GetInstance().GetScore();
+
+	wstring message = L"Game Over!\n\Final Score: " + to_wstring(finalSocre) + L"\n\nPlay Again?";
+
+	int result = MessageBox(
+		m_hwnd,
+		message.c_str(),
+		L"Game Over",
+		MB_OKCANCEL | MB_ICONINFORMATION
+	);
+
+	if (result == IDOK)
+	{
+		RestartGame();
+	}
+	else
+	{
+		PostQuitMessage(0);
+	}
+}
+
+void MainWindow::RestartGame()
+{
+	GameManager::GetInstance().Reset();
+	Initialize();
 }
 
 void MainWindow::MoveBlocks()

@@ -5,8 +5,8 @@ Ball::Ball(unsigned int x, unsigned int y)
 	:x(x), y(y)
 {
 	r = BALL::RADIUS;
-	Vx = 4;
-	Vy = -4;
+	Vx = 8;
+	Vy = -8;
 }
 
 void Ball::Draw(const HDC& hdc)

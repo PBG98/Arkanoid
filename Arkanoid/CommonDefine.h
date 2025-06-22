@@ -8,8 +8,7 @@ namespace COMMON
 	{
 		Ready,
 		Start,
-		Paused,
-		End
+		Paused
 	};
 }
 

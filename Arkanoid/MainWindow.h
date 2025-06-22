@@ -21,9 +21,10 @@ public:
 private:
 	void Initialize();
 	std::optional<WINDOW::Line> CheckBallCollideToWindow();
+	void DrawScore(HDC hdc);
+	void ShowGameOverDialog();
+	void RestartGame();
 private:
-	COMMON::GameStatus gameStatus;
-
 	unique_ptr<Paddle> paddle;
 	unique_ptr<Ball> ball;
 	std::forward_list<unique_ptr<Block>> blocks;
@@ -31,5 +32,7 @@ private:
 	CRITICAL_SECTION cs;
 	HANDLE hThread;
 	size_t blockArrayNum;
+
+	static HANDLE hStopEvent;
 };
 

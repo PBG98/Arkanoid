@@ -1,4 +1,5 @@
 #pragma once
+#include "CommonDefine.h"
 class GameManager
 {
 public:
@@ -11,13 +12,16 @@ public:
 public:
 	static GameManager& GetInstance();
 
+	void UpdateGameStatus(COMMON::GameStatus status);
+	bool CheckGameStatus(COMMON::GameStatus status);
 	unsigned int GetScore();
-	void IncreaseScore();
+	void IncreaseScore(size_t score);
 	void DecreaseLife();
-
 	bool IsGameOver();
+	void Reset();
 
 private:
+	COMMON::GameStatus status;
 	unsigned int score;
 	int life;
 };
