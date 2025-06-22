@@ -2,7 +2,7 @@
 #include "Drawable.h"
 
 Drawable::Drawable()
-	:m_mainWND(nullptr), m_rectMain(0), speedByKeyBoard(20)
+	:m_mainWND(nullptr), m_rectMain(0), speedByKeyBoard(COMMON::KEBOARD_SPEED)
 {
 	
 }

@@ -2,9 +2,9 @@
 #include "GameManager.h"
 
 GameManager::GameManager()
+	:score(0), life(COMMON::LIFE)
 {
-	score = 0;
-	life = 3;
+	
 }
 
 GameManager::~GameManager()
@@ -51,5 +51,5 @@ void GameManager::Reset()
 {
 	status = COMMON::GameStatus::Ready;
 	score = 0;
-	life = 3;
+	life = COMMON::LIFE;
 }

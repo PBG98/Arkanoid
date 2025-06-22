@@ -21,16 +21,30 @@ MainWindow::MainWindow()
 
 MainWindow::~MainWindow()
 {
+	if (hStopEvent)
+	{
+		SetEvent(hStopEvent);
+	}
+	
 	if (hThread)
 	{
 		WaitForSingleObject(hThread, INFINITE);
 		CloseHandle(hThread);
+		hThread = nullptr;
+	}
+
+	DeleteCriticalSection(&cs);
+
+	if (hStopEvent)
+	{
+		CloseHandle(hStopEvent);
+		hStopEvent = nullptr;
 	}
 }
 
 PCWSTR MainWindow::ClassName() const
 {
-	return COMMON::ARKNOID.c_str();
+	return ARKNOID.c_str();
 }
 
 LRESULT MainWindow::HandleMessage(UINT uMsg, WPARAM wParam, LPARAM lParam)
@@ -43,7 +57,7 @@ LRESULT MainWindow::HandleMessage(UINT uMsg, WPARAM wParam, LPARAM lParam)
 		
 		return 0;
 	case WM_TIMER:
-		if (GameManager::GetInstance().CheckGameStatus(COMMON::GameStatus::Start))
+		if (GameManager::GetInstance().CheckGameStatus(GameStatus::Start))
 		{
 			if (CheckBallCollideToWindow() == WINDOW::Line::bottom)
 			{
@@ -51,16 +65,23 @@ LRESULT MainWindow::HandleMessage(UINT uMsg, WPARAM wParam, LPARAM lParam)
 				Initialize();
 				if (GameManager::GetInstance().IsGameOver())
 				{
+					GameManager::GetInstance().UpdateGameStatus(GameStatus::End);
 					ShowGameOverDialog();
 				}
 				return 0;
 			}
 
 			Collision<Paddle>::Check(*ball, *paddle);
+
+			EnterCriticalSection(&cs);
 			size_t score = blocks.remove_if([&](const auto& block) {return Collision<Block>::Check(*ball, *block); });
+			LeaveCriticalSection(&cs);
+
 			GameManager::GetInstance().IncreaseScore(score);
 
 			ball->Move();
+
+			CheckBlocksReachPaddle();
 		}		
 		InvalidateRect(m_hwnd, NULL, TRUE);
 		return 0;
@@ -68,26 +89,26 @@ LRESULT MainWindow::HandleMessage(UINT uMsg, WPARAM wParam, LPARAM lParam)
 	{
 		if (wParam == VK_SPACE)
 		{
-			if (GameManager::GetInstance().CheckGameStatus(COMMON::GameStatus::Ready) ||
-				GameManager::GetInstance().CheckGameStatus(COMMON::GameStatus::Paused))
+			if (GameManager::GetInstance().CheckGameStatus(GameStatus::Ready) ||
+				GameManager::GetInstance().CheckGameStatus(GameStatus::Paused))
 			{
-				GameManager::GetInstance().UpdateGameStatus(COMMON::GameStatus::Start);
+				GameManager::GetInstance().UpdateGameStatus(GameStatus::Start);
 			}
 			else
 			{
-				GameManager::GetInstance().UpdateGameStatus(COMMON::GameStatus::Paused);
+				GameManager::GetInstance().UpdateGameStatus(GameStatus::Paused);
 			}
 		}
 
 		if (wParam == VK_LEFT)
 		{
-			if (GameManager::GetInstance().CheckGameStatus(COMMON::GameStatus::Ready) ||
-				GameManager::GetInstance().CheckGameStatus(COMMON::GameStatus::Start))
+			if (GameManager::GetInstance().CheckGameStatus(GameStatus::Ready) ||
+				GameManager::GetInstance().CheckGameStatus(GameStatus::Start))
 			{
 				paddle->MoveLeft();
 			}
 
-			if (GameManager::GetInstance().CheckGameStatus(COMMON::GameStatus::Ready))
+			if (GameManager::GetInstance().CheckGameStatus(GameStatus::Ready))
 			{
 				ball->MoveLeft();
 			}
@@ -95,13 +116,13 @@ LRESULT MainWindow::HandleMessage(UINT uMsg, WPARAM wParam, LPARAM lParam)
 
 		if (wParam == VK_RIGHT)
 		{
-			if (GameManager::GetInstance().CheckGameStatus(COMMON::GameStatus::Ready) ||
-				GameManager::GetInstance().CheckGameStatus(COMMON::GameStatus::Start))
+			if (GameManager::GetInstance().CheckGameStatus(GameStatus::Ready) ||
+				GameManager::GetInstance().CheckGameStatus(GameStatus::Start))
 			{
 				paddle->MoveRight();
 			}
 
-			if (GameManager::GetInstance().CheckGameStatus(COMMON::GameStatus::Ready))
+			if (GameManager::GetInstance().CheckGameStatus(GameStatus::Ready))
 			{
 				ball->MoveRight();
 			}
@@ -113,7 +134,7 @@ LRESULT MainWindow::HandleMessage(UINT uMsg, WPARAM wParam, LPARAM lParam)
 		PostQuitMessage(0);
 		return 0;
 	case WM_CLOSE:
-		if (MessageBox(m_hwnd, L"Really quit?", COMMON::ARKNOID.c_str(), MB_OKCANCEL) == IDOK)
+		if (MessageBox(m_hwnd, L"Really quit?", ARKNOID.c_str(), MB_OKCANCEL) == IDOK)
 		{
 			DestroyWindow(m_hwnd);
 		}
@@ -127,10 +148,12 @@ LRESULT MainWindow::HandleMessage(UINT uMsg, WPARAM wParam, LPARAM lParam)
 
 		paddle->Draw(hdc);
 		ball->Draw(hdc);
+		EnterCriticalSection(&cs);
 		for (const auto& block : blocks)
 		{
 			block.get()->Draw(hdc);
 		}
+		LeaveCriticalSection(&cs);
 
 		DrawScore(hdc);
 
@@ -156,17 +179,20 @@ UINT WINAPI MainWindow::CreateBlocks(LPVOID pParam)
 {
 	MainWindow* wnd = static_cast<MainWindow*>(pParam);
 
-	while (WaitForSingleObject(hStopEvent, 0) == WAIT_TIMEOUT)
+	while (WaitForSingleObject(wnd->hStopEvent, 0) != WAIT_OBJECT_0)
 	{
-		if (GameManager::GetInstance().CheckGameStatus(COMMON::GameStatus::Start))
+		if (GameManager::GetInstance().CheckGameStatus(GameStatus::Start))
 		{
+			EnterCriticalSection(&wnd->cs);
 			wnd->CreateBlockArray();
 			wnd->MoveBlocks();
+			LeaveCriticalSection(&wnd->cs);
 
 			InvalidateRect(wnd->m_hwnd, NULL, TRUE);
+		}
 
-			Sleep(8000);
-		}	
+		if (WaitForSingleObject(wnd->hStopEvent, BLOCK_CREATE_TIME) != WAIT_TIMEOUT)
+			break;
 	}
 
 	return 0;
@@ -182,16 +208,18 @@ void MainWindow::Initialize()
 	{
 		ball.reset();
 	}
+	EnterCriticalSection(&cs);
 	if (!blocks.empty())
 	{
 		blocks.clear();
 	}
-	paddle = make_unique<Paddle>(200, 400);
-	ball = make_unique<Ball>(200 + PADDLE::WIDTH / 2, 400 - BALL::RADIUS - 1);
+	LeaveCriticalSection(&cs);
+	paddle = make_unique<Paddle>(INTIAL_POINT_LEFT, INTIAL_POINT_TOP);
+	ball = make_unique<Ball>(INTIAL_POINT_LEFT + PADDLE::WIDTH / 2, INTIAL_POINT_TOP - BALL::RADIUS - 1);
 	paddle->Initialize(m_hwnd);
 	ball->Initialize(m_hwnd);
 
-	GameManager::GetInstance().UpdateGameStatus(COMMON::GameStatus::Ready);
+	GameManager::GetInstance().UpdateGameStatus(GameStatus::Ready);
 
 	RECT rectMain;
 	GetClientRect(m_hwnd, &rectMain);
@@ -234,6 +262,32 @@ std::optional<WINDOW::Line> MainWindow::CheckBallCollideToWindow()
 	}
 
 	return nullopt;
+}
+
+void MainWindow::CheckBlocksReachPaddle()
+{
+	bool anyBlockReached = false;
+
+	EnterCriticalSection(&cs);
+	blocks.remove_if([&](const auto& block) {
+		if (block->GetBottom() > paddle->GetTop())
+		{
+			anyBlockReached = true;
+			return true;
+		}
+		return false;
+		});
+	LeaveCriticalSection(&cs);
+
+	if (anyBlockReached)
+	{
+		GameManager::GetInstance().DecreaseLife();
+		if (GameManager::GetInstance().IsGameOver())
+		{
+			GameManager::GetInstance().UpdateGameStatus(GameStatus::End);
+			ShowGameOverDialog();
+		}
+	}
 }
 
 void MainWindow::DrawScore(HDC hdc)
