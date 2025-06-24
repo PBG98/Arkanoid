@@ -158,10 +158,18 @@
     <ClInclude Include="MainWindow.h" />
     <ClInclude Include="Paddle.h" />
     <ClInclude Include="pch.h" />
+    <ClInclude Include="resource.h" />
     <ClInclude Include="Utility.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="cpp.hint" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="Arkanoid.rc" />
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="Arkanoid.ico" />
+    <Image Include="Arkanoid.png" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

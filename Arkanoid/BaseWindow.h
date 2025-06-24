@@ -1,5 +1,6 @@
 #pragma once
 #include "pch.h"
+#include "resource.h"
 
 template<class DERIVED_TYPE>
 class BaseWindow
@@ -63,6 +64,7 @@ inline BOOL BaseWindow<DERIVED_TYPE>::Create(PCWSTR lpWindowName, DWORD dwStyle,
 	wc.lpfnWndProc = BaseWindow::WindowProc;
 	wc.hInstance = GetModuleHandle(NULL);
 	wc.lpszClassName = ClassName();
+	wc.hIcon = LoadIcon(GetModuleHandle(NULL), MAKEINTRESOURCE(IDI_ICON1));
 
 	RegisterClass(&wc);
 
