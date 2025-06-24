@@ -36,9 +36,6 @@
     <ClCompile Include="Drawable.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
-    <ClCompile Include="Utility.cpp">
-      <Filter>소스 파일</Filter>
-    </ClCompile>
     <ClCompile Include="GameManager.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
@@ -68,9 +65,6 @@
     <ClInclude Include="Drawable.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
-    <ClInclude Include="Utility.h">
-      <Filter>헤더 파일</Filter>
-    </ClInclude>
     <ClInclude Include="Collision.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
@@ -91,9 +85,6 @@
   </ItemGroup>
   <ItemGroup>
     <Image Include="Arkanoid.ico">
-      <Filter>리소스 파일</Filter>
-    </Image>
-    <Image Include="Arkanoid.png">
       <Filter>리소스 파일</Filter>
     </Image>
   </ItemGroup>
