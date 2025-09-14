@@ -1,5 +1,7 @@
 #include "pch.h"
 #include "MainWindow.h"
+#include <sw/redis++/redis++.h>
+using namespace sw::redis;
 
 MainWindow::MainWindow()
 	:blockArrayNum(0), memDC(nullptr), memBitmap(nullptr), oldBitmap(nullptr)
